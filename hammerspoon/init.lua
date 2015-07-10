@@ -142,6 +142,70 @@ function serializeTable(val, name, skipnewlines, depth)
   return tmp
 end
 
+function string.starts(str,Start)
+   return string.sub(str,1,string.len(Start))==Start
+end
+
+--
+-- WiFi
+--
+
+local wifiWatcher = nil
+local home = {["Lemonparty"] = TRUE, ["Lemonparty 5GHz"] = TRUE}
+local lastSSID = hs.wifi.currentNetwork()
+
+function ssidChangedCallback()
+    newSSID = hs.wifi.currentNetwork()
+
+    if home[newSSID] and not home[lastSSID] then
+        -- We just joined our home WiFi network
+        hs.audiodevice.defaultOutputDevice():setVolume(25)
+    elseif not home[newSSID] and home[lastSSID] then
+        -- We just departed our home WiFi network
+        hs.audiodevice.defaultOutputDevice():setVolume(0)
+    end
+
+    lastSSID = newSSID
+end
+
+wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
+wifiWatcher:start()
+
+
+--
+-- Application overrides
+--
+
+--
+-- Fix Slack's channel switching.
+-- This rebinds ctrl-tab and ctrl-shift-tab back to switching channels,
+-- which is what they did before the Teams update.
+--
+-- Slack only provides alt+up/down for switching channels, (and the cmd-t switcher,
+-- which is buggy) and have 3 (!) shortcuts for switching teams, most of which are
+-- the usual tab switching shortcuts in every other app.
+--
+local ctrlTab = hotkey.new({"ctrl"}, "tab", function()
+  hs.eventtap.keyStroke({"alt"}, "Down")
+end)
+local ctrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
+  hs.eventtap.keyStroke({"alt"}, "Up")
+end)
+slackWatcher = hs.application.watcher.new(function(name, eventType, app)
+  if eventType ~= hs.application.watcher.activated then return end
+  if name == "Slack" then
+    ctrlTab:enable()
+    ctrlShiftTab:enable()
+  else
+    ctrlTab:disable()
+    ctrlShiftTab:disable()
+  end
+end)
+
+--
+-- INIT!
+--
+
 function init()
   -- Bind hotkeys.
   createHotkeys()
@@ -149,8 +213,13 @@ function init()
   keycodes.inputSourceChanged(rebindHotkeys)
   -- Automatically reload config when it changes.
   hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
+  -- Doesn't work with symlinks... so go straight to the git repo.
+  hs.pathwatcher.new(os.getenv("HOME") .. "/git/oss/init/hammerspoon/", reloadConfig):start()
 
-  alert.show("Hammerspoon, at your service.")
+  slackWatcher:stop()
+  slackWatcher:start()
+
+  alert.show("Reloaded.", 1)
 end
 
 -- Actual config =================================
@@ -225,8 +294,6 @@ definitions = {
   M = grid.maximizeWindow,
   N = function() grid.snap(window.focusedWindow()) end
 }
-
-
 
 
 --
