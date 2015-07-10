@@ -15,17 +15,7 @@ local definitions = nil
 local hyper = nil
 local hyper2 = nil
 
-local gridset = function(frame)
-  return function()
-    local win = window.focusedWindow()
-    if win then
-      grid.set(win, frame, win:screen())
-    else
-      alert.show("No focused window.")
-    end
-  end
-end
-
+-- Allow saving focus, then restoring it later.
 auxWin = nil
 function saveFocus()
   auxWin = window.focusedWindow()
@@ -37,8 +27,10 @@ function focusSaved()
   end
 end
 
+--
+-- Hotkeys
+--
 local hotkeys = {}
-
 function createHotkeys()
   for key, fun in pairs(definitions) do
     local mod = hyper
@@ -67,6 +59,22 @@ function rebindHotkeys()
   alert.show("Rebound Hotkeys")
 end
 
+--
+-- Grid
+--
+
+-- HO function for automating moving a window to a predefined position.
+local gridset = function(frame)
+  return function()
+    local win = window.focusedWindow()
+    if win then
+      grid.set(win, frame, win:screen())
+    else
+      alert.show("No focused window.")
+    end
+  end
+end
+
 function applyPlace(win, place)
   local scrs = screen:allScreens()
   local scr = scrs[place[1]]
@@ -87,6 +95,24 @@ function applyLayout(layout)
   end
 end
 
+--
+-- Conf
+--
+
+--
+-- Utility
+--
+
+function reloadConfig(files)
+  for _,file in pairs(files) do
+    if file:sub(-4) == ".lua" then
+      hs.reload()
+      return
+    end
+  end
+end
+
+-- Prints out a table like a JSON object. Utility
 function serializeTable(val, name, skipnewlines, depth)
   skipnewlines = skipnewlines or false
   depth = depth or 0
@@ -117,8 +143,12 @@ function serializeTable(val, name, skipnewlines, depth)
 end
 
 function init()
+  -- Bind hotkeys.
   createHotkeys()
+  -- If we hook up a keyboard, rebind.
   keycodes.inputSourceChanged(rebindHotkeys)
+  -- Automatically reload config when it changes.
+  hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
 
   alert.show("Hammerspoon, at your service.")
 end
@@ -127,7 +157,7 @@ end
 
 hyper = {"cmd", "alt", "ctrl","shift"}
 hyper2 = {"ctrl"}
-hs.window.animationDuration = 0;
+hs.window.animationDuration = 0.2;
 -- hints.style = "vimperator"
 -- Set grid size.
 grid.GRIDWIDTH  = 32
@@ -168,9 +198,9 @@ definitions = {
   g = applyLayout(layout2),
 
   d = grid.pushWindowNextScreen,
-  r = hs.reload,
   q = function() appfinder.appFromName("Hammerspoon"):kill() end,
 
+  -- TODO app focused window hints
   -- k = function() hints.windowHints(appfinder.appFromName("Sublime Text"):allWindows()) end,
   -- j = function() hints.windowHints(window.focusedWindow():application():allWindows()) end,
   -- ll = function() hyper, hyper2 = hyper2,hyper; rebindHotkeys() end,
