@@ -185,20 +185,44 @@ wifiWatcher:start()
 -- which is buggy) and have 3 (!) shortcuts for switching teams, most of which are
 -- the usual tab switching shortcuts in every other app.
 --
-local ctrlTab = hotkey.new({"ctrl"}, "tab", function()
+local slackCtrlTab = hotkey.new({"ctrl"}, "tab", function()
   hs.eventtap.keyStroke({"alt"}, "Down")
 end)
-local ctrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
+local slackCtrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
   hs.eventtap.keyStroke({"alt"}, "Up")
 end)
+-- Disables cmd-w, which is so annoying on slack
+local cmdW = hotkey.new({"cmd"}, "w", function() return end)
 slackWatcher = hs.application.watcher.new(function(name, eventType, app)
   if eventType ~= hs.application.watcher.activated then return end
   if name == "Slack" then
-    ctrlTab:enable()
-    ctrlShiftTab:enable()
+    slackCtrlTab:enable()
+    slackCtrlShiftTab:enable()
+    cmdW:enable()
   else
-    ctrlTab:disable()
-    ctrlShiftTab:disable()
+    slackCtrlTab:disable()
+    slackCtrlShiftTab:disable()
+    cmdW:disable()
+  end
+end)
+
+--
+-- Fix Skype's channel switching.
+--
+local skypeCtrlTab = hotkey.new({"ctrl"}, "tab", function()
+  hs.eventtap.keyStroke({"alt", "cmd"}, "Right")
+end)
+local skypeCtrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
+  hs.eventtap.keyStroke({"alt", "cmd"}, "Left")
+end)
+slackWatcher = hs.application.watcher.new(function(name, eventType, app)
+  if eventType ~= hs.application.watcher.activated then return end
+  if name == "Skype" then
+    skypeCtrlTab:enable()
+    skypeCtrlShiftTab:enable()
+  else
+    skypeCtrlTab:disable()
+    skypeCtrlShiftTab:disable()
   end
 end)
 
@@ -246,8 +270,8 @@ local layout2 = {
   ["Sublime Text"] = {1, {x = 0, y = 0, h = 12, w = 11}},
   LimeChat = {1, {x = 0, y = 12, h = 6, w = 5}},
   ["Google Chrome"] = {1, {x = 11, y = 6, h = 12, w = 11}},
-  Slack = {1, {x = 22, y = 0, h = 6, w = 10}},
-  Thunderbird = {1, {x = 22, y = 12, h = 6, w = 10}},
+  Slack = {1, {x = 22, y = 0, h = 9, w = 10}},
+  Thunderbird = {1, {x = 22, y = 9, h = 9, w = 10}},
   Skype = {1, {x = 5, y = 12, h = 6, w = 6}},
   iTerm = {1, {x = 11, y = 0, h = 6, w = 9}},
   Messages = {1, {x = 26, y = 12, w = 6, h = 6}},
