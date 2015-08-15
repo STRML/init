@@ -36,6 +36,7 @@ end
 local hotkeys = {}
 function createHotkeys()
   for key, fun in pairs(definitions) do
+    if key == "." then alert.show("Key bound to `.`, which is an internal OS X shortcut for sysdiagnose.") end
     local mod = hyper
     -- Any definitions ending with c are cmd defs
     if string.len(key) == 2 and string.sub(key,2,2) == "c" then
@@ -88,7 +89,7 @@ function applyLayout(layout)
   return function()
     alert.show("Applying Layout.")
     for appName, place in pairs(layout) do
-      -- Two types we allow: table, which is appName -> windowTitle, or just the app itself
+      -- Two types we allow: table, which is {appName, windowTitle}, or just the app itself
       if type(appName) == 'table' then
         local parentAppName = appName[1]
         local windowPattern = appName[2]
@@ -186,6 +187,27 @@ end
 
 local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
 wifiWatcher:start()
+
+-- I always end up losing my mouse pointer, particularly if it's on a monitor full of terminals.
+-- This draws a bright red circle around the pointer for a few seconds
+-- from https://github.com/cmsj/hammerspoon-config/blob/master/init.lua
+function mouseHighlight()
+  if mouseCircle then
+    mouseCircle:delete()
+    if mouseCircleTimer then
+      mouseCircleTimer:stop()
+    end
+  end
+  mousepoint = hs.mouse.getAbsolutePosition()
+  mouseCircle = hs.drawing.circle(hs.geometry.rect(mousepoint.x-40, mousepoint.y-40, 80, 80))
+  mouseCircle:setStrokeColor({["red"]=1,["blue"]=0,["green"]=0,["alpha"]=1})
+  mouseCircle:setFill(false)
+  mouseCircle:setStrokeWidth(5)
+  mouseCircle:bringToFront(true)
+  mouseCircle:show()
+
+  mouseCircleTimer = hs.timer.doAfter(3, function() mouseCircle:delete() end)
+end
 
 --
 -- Application overrides
@@ -298,6 +320,7 @@ local layout2 = {
   Finder = {1, {x = 22, y = 6, w = 10, h = 6}}
 }
 
+-- Watch out, cmd-opt-ctrl-shift-period is an actual OS X shortcut for running sysdiagose
 definitions = {
   r = hs.reload,
   [";"] = saveFocus,
@@ -320,6 +343,8 @@ definitions = {
   -- ll = function() hyper, hyper2 = hyper2,hyper; rebindHotkeys() end,
   ["e"] = function() hints.windowHints(nil) end,
 
+  ["\\"] = mouseHighlight,
+  o = function() hs.execute(os.getenv("HOME") .. "/bin/subl ".. os.getenv("HOME") .."/.hammerspoon/init.lua") end,
   --
   -- GRID
   --
