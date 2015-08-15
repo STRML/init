@@ -15,6 +15,9 @@ local definitions = nil
 local hyper = nil
 local hyper2 = nil
 
+local watchers = {}
+
+
 -- Allow saving focus, then restoring it later.
 auxWin = nil
 function saveFocus()
@@ -85,10 +88,24 @@ function applyLayout(layout)
   return function()
     alert.show("Applying Layout.")
     for appName, place in pairs(layout) do
-      local app = appfinder.appFromName(appName)
-      if app then
-        for i, win in ipairs(app:allWindows()) do
-          applyPlace(win, place)
+      -- Two types we allow: table, which is appName -> windowTitle, or just the app itself
+      if type(appName) == 'table' then
+        local parentAppName = appName[1]
+        local windowPattern = appName[2]
+        local app = appfinder.appFromName(parentAppName)
+        if app then
+          for i, win in ipairs(app:allWindows()) do
+            if string.match(win:title(), windowPattern) then
+              applyPlace(win, place)
+            end
+          end
+        end
+      else
+        local app = appfinder.appFromName(appName)
+        if app then
+          for i, win in ipairs(app:allWindows()) do
+            applyPlace(win, place)
+          end
         end
       end
     end
@@ -150,7 +167,6 @@ end
 -- WiFi
 --
 
-local wifiWatcher = nil
 local home = {["Lemonparty"] = TRUE, ["Lemonparty 5GHz"] = TRUE}
 local lastSSID = hs.wifi.currentNetwork()
 
@@ -168,13 +184,13 @@ function ssidChangedCallback()
     lastSSID = newSSID
 end
 
-wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
+local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
 wifiWatcher:start()
-
 
 --
 -- Application overrides
 --
+
 
 --
 -- Fix Slack's channel switching.
@@ -193,7 +209,7 @@ local slackCtrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
 end)
 -- Disables cmd-w, which is so annoying on slack
 local cmdW = hotkey.new({"cmd"}, "w", function() return end)
-slackWatcher = hs.application.watcher.new(function(name, eventType, app)
+local slackWatcher = hs.application.watcher.new(function(name, eventType, app)
   if eventType ~= hs.application.watcher.activated then return end
   if name == "Slack" then
     slackCtrlTab:enable()
@@ -205,6 +221,7 @@ slackWatcher = hs.application.watcher.new(function(name, eventType, app)
     cmdW:disable()
   end
 end)
+slackWatcher:start()
 
 --
 -- Fix Skype's channel switching.
@@ -215,7 +232,7 @@ end)
 local skypeCtrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
   hs.eventtap.keyStroke({"alt", "cmd"}, "Left")
 end)
-slackWatcher = hs.application.watcher.new(function(name, eventType, app)
+local skypeWatcher = hs.application.watcher.new(function(name, eventType, app)
   if eventType ~= hs.application.watcher.activated then return end
   if name == "Skype" then
     skypeCtrlTab:enable()
@@ -225,6 +242,7 @@ slackWatcher = hs.application.watcher.new(function(name, eventType, app)
     skypeCtrlShiftTab:disable()
   end
 end)
+skypeWatcher:start()
 
 --
 -- INIT!
@@ -239,9 +257,6 @@ function init()
   hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
   -- Doesn't work with symlinks... so go straight to the git repo.
   hs.pathwatcher.new(os.getenv("HOME") .. "/git/oss/init/hammerspoon/", reloadConfig):start()
-
-  slackWatcher:stop()
-  slackWatcher:start()
 
   alert.show("Reloaded.", 1)
 end
@@ -260,9 +275,13 @@ grid.MARGINY = 0
 local gw = grid.GRIDWIDTH
 local gh = grid.GRIDHEIGHT
 
-local gomiddle = {x = 1, y = 1, w = 4, h = 6}
-local goleft = {x = 0, y = 0, w = gw/2, h = gh}
-local goright = {x = gw/2, y = 0, w = gw/2, h = gh}
+local godMiddle = {x = 1, y = 1, w = 4, h = 6}
+local goLeft = {x = 0, y = 0, w = gw/2, h = gh}
+local goRight = {x = gw/2, y = 0, w = gw/2, h = gh}
+local goTopLeft = {x = 0, y = 0, w = gw/2, h = gh/2}
+local goTopRight = {x = gw/2, y = 0, w = gw/2, h = gh/2}
+local goBottomLeft = {x = 0, y = gh/2, w = gw/2, h = gh/2}
+local goBottomRight = {x = gw/2, y = gh/2, w = gw/2, h = gh/2}
 local gobig = {x = 0, y = 0, w = gw, h = gh}
 
 -- Saved layout. TODO
@@ -270,6 +289,7 @@ local layout2 = {
   ["Sublime Text"] = {1, {x = 0, y = 0, h = 12, w = 11}},
   LimeChat = {1, {x = 0, y = 12, h = 6, w = 5}},
   ["Google Chrome"] = {1, {x = 11, y = 6, h = 12, w = 11}},
+  [{"Google Chrome", "Developer Tools.*"}] = {1, {x = 0, y = 6, h = 12, w = 11}},
   Slack = {1, {x = 22, y = 0, h = 9, w = 10}},
   Thunderbird = {1, {x = 22, y = 9, h = 9, w = 10}},
   Skype = {1, {x = 5, y = 12, h = 6, w = 6}},
@@ -279,13 +299,14 @@ local layout2 = {
 }
 
 definitions = {
+  r = hs.reload,
   [";"] = saveFocus,
   a = focusSaved,
 
-  -- h = gridset(gomiddle),
-  Left = gridset(goleft),
+  -- h = gridset(godMiddle),
+  Left = gridset(goLeft),
   Up = grid.maximizeWindow,
-  Right = gridset(goright),
+  Right = gridset(goRight),
 
   ["'"] = function() alert.show(serializeTable(grid.get(window.focusedWindow())), 30) end,
   g = applyLayout(layout2),
