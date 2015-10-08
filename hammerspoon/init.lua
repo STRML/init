@@ -223,24 +223,29 @@ end
 -- which is buggy) and have 3 (!) shortcuts for switching teams, most of which are
 -- the usual tab switching shortcuts in every other app.
 --
-local slackCtrlTab = hotkey.new({"ctrl"}, "tab", function()
-  hs.eventtap.keyStroke({"alt"}, "Down")
-end)
-local slackCtrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
-  hs.eventtap.keyStroke({"alt"}, "Up")
-end)
--- Disables cmd-w, which is so annoying on slack
-local cmdW = hotkey.new({"cmd"}, "w", function() return end)
+-- This basically turns the tab switching shortcuts into LimeChat shortcuts, which very smartly
+-- uses the brackets to switch any channel, and ctrl-(shift)-tab to switch unreads.
+local slackKeybinds = {
+  hotkey.new({"ctrl"}, "tab", function()
+    hs.eventtap.keyStroke({"alt", "shift"}, "Down")
+  end),
+  hotkey.new({"ctrl", "shift"}, "tab", function()
+    hs.eventtap.keyStroke({"alt", "shift"}, "Up")
+  end),
+  hotkey.new({"cmd", "shift"}, "[", function()
+    hs.eventtap.keyStroke({"alt"}, "Up")
+  end),
+  hotkey.new({"cmd", "shift"}, "]", function()
+    hs.eventtap.keyStroke({"alt"}, "Down")
+  end),
+  -- Disables cmd-w entirely, which is so annoying on slack
+  hotkey.new({"cmd"}, "w", function() return end)
+}
 local slackWatcher = hs.application.watcher.new(function(name, eventType, app)
   if eventType ~= hs.application.watcher.activated then return end
-  if name == "Slack" then
-    slackCtrlTab:enable()
-    slackCtrlShiftTab:enable()
-    cmdW:enable()
-  else
-    slackCtrlTab:disable()
-    slackCtrlShiftTab:disable()
-    cmdW:disable()
+  local fnName = name == "Slack" and "enable" or "disable"
+  for i, keybind in ipairs(slackKeybinds) do
+    keybind[fnName](keybind)
   end
 end)
 slackWatcher:start()
@@ -248,20 +253,19 @@ slackWatcher:start()
 --
 -- Fix Skype's channel switching.
 --
-local skypeCtrlTab = hotkey.new({"ctrl"}, "tab", function()
-  hs.eventtap.keyStroke({"alt", "cmd"}, "Right")
-end)
-local skypeCtrlShiftTab = hotkey.new({"ctrl", "shift"}, "tab", function()
-  hs.eventtap.keyStroke({"alt", "cmd"}, "Left")
-end)
+local skypeKeybinds = {
+  hotkey.new({"ctrl"}, "tab", function()
+    hs.eventtap.keyStroke({"alt", "cmd"}, "Right")
+  end),
+  hotkey.new({"ctrl", "shift"}, "tab", function()
+    hs.eventtap.keyStroke({"alt", "cmd"}, "Left")
+  end)
+}
 local skypeWatcher = hs.application.watcher.new(function(name, eventType, app)
   if eventType ~= hs.application.watcher.activated then return end
-  if name == "Skype" then
-    skypeCtrlTab:enable()
-    skypeCtrlShiftTab:enable()
-  else
-    skypeCtrlTab:disable()
-    skypeCtrlShiftTab:disable()
+  local fnName = name == "Skype" and "enable" or "disable"
+  for i, keybind in ipairs(slackKeybinds) do
+    keybind[fnName](keybind)
   end
 end)
 skypeWatcher:start()
@@ -297,7 +301,7 @@ grid.MARGINY = 0
 local gw = grid.GRIDWIDTH
 local gh = grid.GRIDHEIGHT
 
-local godMiddle = {x = 1, y = 1, w = 4, h = 6}
+local goMiddle = {x = gw/4, y = gh/4, w = gw/2, h = gh/2}
 local goLeft = {x = 0, y = 0, w = gw/2, h = gh}
 local goRight = {x = gw/2, y = 0, w = gw/2, h = gh}
 local goTopLeft = {x = 0, y = 0, w = gw/2, h = gh/2}
@@ -331,9 +335,16 @@ definitions = {
   Up = grid.maximizeWindow,
   Right = gridset(goRight),
 
+  ['1'] = gridset(goTopLeft),
+  ['3'] = gridset(goTopRight),
+  ['5'] = gridset(goMiddle),
+  ['7'] = gridset(goBottomLeft),
+  ['9'] = gridset(goBottomRight),
+
   ["'"] = function() alert.show(serializeTable(grid.get(window.focusedWindow())), 30) end,
   g = applyLayout(layout2),
 
+  s = grid.pushWindowPrevScreen,
   d = grid.pushWindowNextScreen,
   q = function() appfinder.appFromName("Hammerspoon"):kill() end,
 
