@@ -188,27 +188,6 @@ end
 local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
 wifiWatcher:start()
 
--- I always end up losing my mouse pointer, particularly if it's on a monitor full of terminals.
--- This draws a bright red circle around the pointer for a few seconds
--- from https://github.com/cmsj/hammerspoon-config/blob/master/init.lua
-function mouseHighlight()
-  if mouseCircle then
-    mouseCircle:delete()
-    if mouseCircleTimer then
-      mouseCircleTimer:stop()
-    end
-  end
-  mousepoint = hs.mouse.getAbsolutePosition()
-  mouseCircle = hs.drawing.circle(hs.geometry.rect(mousepoint.x-40, mousepoint.y-40, 80, 80))
-  mouseCircle:setStrokeColor({["red"]=1,["blue"]=0,["green"]=0,["alpha"]=1})
-  mouseCircle:setFill(false)
-  mouseCircle:setStrokeWidth(5)
-  mouseCircle:bringToFront(true)
-  mouseCircle:show()
-
-  mouseCircleTimer = hs.timer.doAfter(3, function() mouseCircle:delete() end)
-end
-
 --
 -- Application overrides
 --
@@ -354,7 +333,6 @@ definitions = {
   -- ll = function() hyper, hyper2 = hyper2,hyper; rebindHotkeys() end,
   ["e"] = function() hints.windowHints(nil) end,
 
-  ["\\"] = mouseHighlight,
   o = function() hs.execute(os.getenv("HOME") .. "/bin/subl ".. os.getenv("HOME") .."/.hammerspoon/init.lua") end,
   --
   -- GRID
