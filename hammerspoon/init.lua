@@ -245,6 +245,7 @@ local slackWatcher = hs.application.watcher.new(function(name, eventType, app)
   if eventType ~= hs.application.watcher.activated then return end
   local fnName = name == "Slack" and "enable" or "disable"
   for i, keybind in ipairs(slackKeybinds) do
+    -- Remember that lua is weird, so this is the same as keybind.enable() in JS, `this` is first param
     keybind[fnName](keybind)
   end
 end)
@@ -264,7 +265,8 @@ local skypeKeybinds = {
 local skypeWatcher = hs.application.watcher.new(function(name, eventType, app)
   if eventType ~= hs.application.watcher.activated then return end
   local fnName = name == "Skype" and "enable" or "disable"
-  for i, keybind in ipairs(slackKeybinds) do
+  for i, keybind in ipairs(skypeKeybinds) do
+    -- Remember that lua is weird, so this is the same as keybind.enable() in JS, `this` is first param
     keybind[fnName](keybind)
   end
 end)
