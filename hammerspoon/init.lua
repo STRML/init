@@ -46,6 +46,9 @@ function createHotkeys()
     elseif string.len(key) == 2 and string.sub(key,2,2) == "l" then
       key = string.sub(key,1,1)
       mod = {"ctrl"}
+    elseif string.len(key) == 4 and string.sub(key,2,4) == "raw" then
+      key = string.sub(key,1,1)
+      mod = {}
     end
 
     local hk = hotkey.new(mod, key, fun)
@@ -369,7 +372,10 @@ definitions = {
   ["]"] = grid.resizeWindowWider,
 
   M = grid.maximizeWindow,
-  N = function() grid.snap(window.focusedWindow()) end
+  N = function() grid.snap(window.focusedWindow()) end,
+
+  -- cmd+\ should run cmd-tab (keyboard symmetry)
+  ["\\c"] = function() hs.eventtap.keyStroke({"cmd"},"tab") end
 }
 
 
