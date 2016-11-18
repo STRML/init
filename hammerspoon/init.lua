@@ -83,7 +83,7 @@ local gridset = function(frame)
 end
 
 function applyPlace(win, place)
-  local scrs = screen:allScreens()
+  local scrs = screen.allScreens()
   local scr = scrs[place[1]]
   grid.set(win, place[2], scr)
 end
@@ -91,20 +91,28 @@ end
 function applyLayout(layout)
   return function()
     alert.show("Applying Layout.")
+    -- Sort table, table keys last so they are sorted independently of the main app
+    table.sort(layout, function (op1, op2)
+      local type1, type2 = type(op1), type(op2)
+      if type1 ~= type2 then
+        return type1 < type2
+      else
+        return op1 < op2
+      end
+    end)
+
     for appName, place in pairs(layout) do
       -- Two types we allow: table, which is {appName, windowTitle}, or just the app itself
       if type(appName) == 'table' then
         local parentAppName = appName[1]
         local windowPattern = appName[2]
-        local app = appfinder.appFromName(parentAppName)
-        if app then
-          for i, win in ipairs(app:allWindows()) do
-            if string.match(win:title(), windowPattern) then
-              applyPlace(win, place)
-            end
-          end
+        alert(windowPattern)
+        local window = appfinder.windowFromWindowTitlePattern(windowPattern)
+        if window then
+          applyPlace(window, place)
         end
       else
+        alert(appName)
         local app = appfinder.appFromName(appName)
         if app then
           for i, win in ipairs(app:allWindows()) do
@@ -164,7 +172,7 @@ function serializeTable(val, name, skipnewlines, depth)
 end
 
 function string.starts(str,Start)
-   return string.sub(str,1,string.len(Start))==Start
+  return string.sub(str,1,string.len(Start))==Start
 end
 
 --
@@ -175,17 +183,20 @@ local home = {["Lemonparty"] = TRUE, ["Lemonparty 5GHz"] = TRUE}
 local lastSSID = hs.wifi.currentNetwork()
 
 function ssidChangedCallback()
-    newSSID = hs.wifi.currentNetwork()
+  newSSID = hs.wifi.currentNetwork()
 
-    if home[newSSID] and not home[lastSSID] then
-        -- We just joined our home WiFi network
-        hs.audiodevice.defaultOutputDevice():setVolume(25)
-    elseif not home[newSSID] and home[lastSSID] then
-        -- We just departed our home WiFi network
-        hs.audiodevice.defaultOutputDevice():setVolume(0)
-    end
+  if home[newSSID] and not home[lastSSID] then
+    -- We just joined our home WiFi network
+    hs.audiodevice.defaultOutputDevice():setVolume(25)
+  elseif not home[newSSID] and home[lastSSID] then
+    -- We just departed our home WiFi network
+    hs.audiodevice.defaultOutputDevice():setVolume(0)
+  end
 
-    lastSSID = newSSID
+  local messages = appfinder.appFromName('Messages')
+  messages:selectMenuItem("Log In")
+
+  lastSSID = newSSID
 end
 
 local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
@@ -286,10 +297,13 @@ function init()
   -- Doesn't work with symlinks... so go straight to the git repo.
   hs.pathwatcher.new(os.getenv("HOME") .. "/git/oss/init/hammerspoon/", reloadConfig):start()
 
+  -- Prevent system sleep, only if connected to AC power. (sleepType, shouldPrevent, batteryToo)
+  hs.caffeinate.set('system', true, false)
+
   alert.show("Reloaded.", 1)
 end
 
--- Actual config =================================
+-- Grid config =================================
 
 hyper = {"cmd", "alt", "ctrl","shift"}
 hyper2 = {"ctrl"}
@@ -316,14 +330,16 @@ local gobig = {x = 0, y = 0, w = gw, h = gh}
 local layout2 = {
   ["Sublime Text"] = {1, {x = 0, y = 0, h = 12, w = 11}},
   LimeChat = {1, {x = 0, y = 12, h = 6, w = 5}},
-  ["Google Chrome"] = {1, {x = 11, y = 6, h = 12, w = 11}},
-  [{"Google Chrome", "Developer Tools.*"}] = {1, {x = 0, y = 6, h = 12, w = 11}},
-  Slack = {1, {x = 22, y = 0, h = 9, w = 10}},
-  Thunderbird = {1, {x = 22, y = 9, h = 9, w = 10}},
-  Skype = {1, {x = 5, y = 12, h = 6, w = 6}},
-  iTerm = {1, {x = 11, y = 0, h = 6, w = 9}},
+  ["Google Chrome"] = {1, {x = 11, y = 7, h = 11, w = 13}},
+  [{"Google Chrome", "Developer Tools.*"}] = {1, {x = 24, y = 7, h = 11, w = 8}},
+  Slack = {1, {x = 24, y = 0, h = 9, w = 8}},
+  Postbox = {1, {x = 24, y = 9, h = 9, w = 8}},
+  Skype = {1, {x = 6, y = 12, h = 6, w = 5}},
+  Telegram = {1, {x = 6, y = 12, h = 6, w = 5}},
+  iTerm2 = {1, {x = 11, y = 0, h = 7, w = 13}},
   Messages = {1, {x = 26, y = 12, w = 6, h = 6}},
-  Finder = {1, {x = 22, y = 6, w = 10, h = 6}}
+  Finder = {1, {x = 22, y = 6, w = 10, h = 6}},
+  Postico = {1, {x = 0, y = 12, w = 6, h = 6}},
 }
 
 -- Watch out, cmd-opt-ctrl-shift-period is an actual OS X shortcut for running sysdiagose
