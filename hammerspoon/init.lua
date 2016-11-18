@@ -189,6 +189,24 @@ local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
 wifiWatcher:start()
 
 --
+-- Sound
+--
+
+-- Mute on jack in/out
+function audioCallback(uid, eventName, eventScope, channelIdx)
+  if eventName == 'jack' then
+    alert("Jack changed, muting.", 1)
+    hs.audiodevice.defaultOutputDevice():setVolume(0)
+  end
+end
+
+
+-- Watch device; mute when headphones unplugged.
+local defaultDevice = hs.audiodevice.defaultOutputDevice()
+defaultDevice:watcherCallback(audioCallback);
+defaultDevice:watcherStart();
+
+--
 -- Application overrides
 --
 
