@@ -310,8 +310,10 @@ hyper2 = {"ctrl"}
 hs.window.animationDuration = 0.2;
 -- hints.style = "vimperator"
 -- Set grid size.
-grid.GRIDWIDTH  = 32
-grid.GRIDHEIGHT = 18
+has4k = hs.screen('3840x2160')
+
+grid.GRIDWIDTH  = has4k and 32 or 4
+grid.GRIDHEIGHT = has4k and 18 or 4
 grid.MARGINX = 0
 grid.MARGINY = 0
 local gw = grid.GRIDWIDTH
@@ -345,8 +347,9 @@ local layout2 = {
 -- Watch out, cmd-opt-ctrl-shift-period is an actual OS X shortcut for running sysdiagose
 definitions = {
   r = hs.reload,
-  [";"] = saveFocus,
-  a = focusSaved,
+  -- Not using
+  -- [";"] = saveFocus,
+  -- a = focusSaved,
 
   -- h = gridset(godMiddle),
   Left = gridset(goLeft),
@@ -359,18 +362,28 @@ definitions = {
   ['7'] = gridset(goBottomLeft),
   ['9'] = gridset(goBottomRight),
 
-  ["'"] = function() alert.show(serializeTable(grid.get(window.focusedWindow())), 30) end,
-  g = applyLayout(layout2),
+  -- ["'"] = function() alert.show(serializeTable(grid.get(window.focusedWindow())), 30) end,
+  g = has4k and applyLayout(layout2) or nil,
 
-  s = grid.pushWindowPrevScreen,
-  d = grid.pushWindowNextScreen,
-  q = function() appfinder.appFromName("Hammerspoon"):kill() end,
+  ["'"] = grid.pushWindowPrevScreen,
+  [";"] = grid.pushWindowNextScreen,
+  ["\\"] = grid.show, -- way too fucked with our grid sizes
+  -- q = function() hs.application.find("Hammerspoon"):kill() end,
 
-  -- TODO app focused window hints
-  -- k = function() hints.windowHints(appfinder.appFromName("Sublime Text"):allWindows()) end,
-  -- j = function() hints.windowHints(window.focusedWindow():application():allWindows()) end,
+  -- Shows all sublime windows
+  -- e = function() hints.windowHints(hs.application.find("Sublime Text"):allWindows()) end,
+  -- Focuses these apps
+  q = function() hs.application.find("Sublime Text"):mainWindow():focus() end,
+  w = function() hs.application.find("iTerm2"):mainWindow():focus() end,
+  c = function() hs.application.find("Google Chrome"):mainWindow():focus() end,
+  s = function() hs.application.find("Slack"):mainWindow():focus() end,
+  -- Show hints for all window
+  f = function() hints.windowHints(nil) end,
+  -- Shows all windows for current app
+  v = function() hints.windowHints(window.focusedWindow():application():allWindows()) end,
+
+  -- Switches hypers, not used
   -- ll = function() hyper, hyper2 = hyper2,hyper; rebindHotkeys() end,
-  ["e"] = function() hints.windowHints(nil) end,
 
   o = function() hs.execute(os.getenv("HOME") .. "/bin/subl ".. os.getenv("HOME") .."/.hammerspoon/init.lua") end,
   --
@@ -378,10 +391,10 @@ definitions = {
   --
 
   -- move windows
-  H = grid.pushWindowLeft,
-  J = grid.pushWindowDown,
-  L = grid.pushWindowRight,
-  K = grid.pushWindowUp,
+  h = grid.pushWindowLeft,
+  j = grid.pushWindowDown,
+  l = grid.pushWindowRight,
+  j = grid.pushWindowUp,
 
   -- resize windows
   ["="] = grid.resizeWindowTaller,
@@ -389,8 +402,8 @@ definitions = {
   ["["] = grid.resizeWindowThinner,
   ["]"] = grid.resizeWindowWider,
 
-  M = grid.maximizeWindow,
-  N = function() grid.snap(window.focusedWindow()) end,
+  m = grid.maximizeWindow,
+  n = function() grid.snap(window.focusedWindow()) end,
 
   -- cmd+\ should run cmd-tab (keyboard symmetry)
   ["\\c"] = function() hs.eventtap.keyStroke({"cmd"},"tab") end
