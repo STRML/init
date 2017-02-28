@@ -256,6 +256,42 @@ defaultDevice:watcherCallback(audioCallback);
 defaultDevice:watcherStart();
 
 --
+-- Battery / Power
+--
+
+-- Disable spotlight indexing while on battery.
+--
+-- In order for this to work, add this to a file in `/etc/sudoers.d/`:
+-- <username> ALL=(root) NOPASSWD: /usr/bin/mdutil -i on /
+-- <username> ALL=(root) NOPASSWD: /usr/bin/mdutil -i off /
+-- Verify with `sudo -l`
+--
+local currentPowerSource = hs.battery.powerSource();
+function batteryWatchUnplugged()
+  newPowerSource = hs.battery.powerSource();
+  if newPowerSource ~= currentPowerSource then
+    alert(string.format("New power source: %s", newPowerSource), 1);
+
+    function taskCb(code, stdout, stderr)
+      if code ~= 0 then
+        alert("Failed, check console.");
+      end
+      print("stdout: "..stdout);
+      print("stderr: "..stderr)
+    end
+    if newPowerSource == 'Battery Power' then
+      alert("Disabling spotlight.", 1);
+      hs.task.new("/usr/bin/sudo", taskCb, {"/usr/bin/mdutil", "-i", "off", "/"}):start()
+    else
+      alert("Enabling spotlight.", 1);
+      hs.task.new("/usr/bin/sudo", taskCb, {"/usr/bin/mdutil", "-i", "on", "/"}):start()
+    end
+    currentPowerSource = newPowerSource;
+  end
+end
+local batteryWatcher = hs.battery.watcher.new(batteryWatchUnplugged):start();
+
+--
 -- Application overrides
 --
 
