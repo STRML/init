@@ -12,8 +12,9 @@ local appfinder = require "hs.appfinder"
 local tabs = require "hs.tabs"
 
 local definitions = nil
-local hyper = nil
-local hyper2 = nil
+-- A global variable for the Hyper Mode
+local hyperKey = nil
+local hyperKeyStub = nil
 
 local watchers = {}
 
@@ -35,6 +36,8 @@ end
 --
 local hotkeys = {}
 function createHotkeys()
+  bindHyperKeyStub()
+
   for key, fun in pairs(definitions) do
     if key == "." then alert.show("Key bound to `.`, which is an internal OS X shortcut for sysdiagnose.") end
     local mod = hyper
@@ -51,9 +54,15 @@ function createHotkeys()
       mod = {}
     end
 
-    local hk = hotkey.new(mod, key, fun)
-    table.insert(hotkeys, hk)
-    hk:enable()
+    -- Sierra hack
+    if mod == hyper then
+      -- Bind to the existing F17 stub
+      hyperKeyStub:bind({}, key, nil, fun)
+    else
+      local hk = hotkey.new(mod, key, fun)
+      table.insert(hotkeys, hk)
+      hk:enable()
+    end
   end
 end
 
@@ -61,9 +70,35 @@ function rebindHotkeys()
   for i, hk in ipairs(hotkeys) do
     hk:disable()
   end
+  hyperKey:delete()
+  hyperKeyStub:delete()
+
   hotkeys = {}
   createHotkeys()
   alert.show("Rebound Hotkeys")
+end
+
+function bindHyperKeyStub()
+  -- Create a new F17 global
+  hyperKeyStub = hs.hotkey.modal.new({}, "F17")
+
+  -- Enter Hyper Mode when F18 (Hyper/Capslock) is pressed
+  pressedF18 = function()
+    hyperKeyStub.triggered = false
+    hyperKeyStub:enter()
+  end
+
+  -- Leave Hyper Mode when F18 (Hyper/Capslock) is pressed,
+  --   send ESCAPE if no other keys are pressed.
+  releasedF18 = function()
+    hyperKeyStub:exit()
+    if not hyperKeyStub.triggered then
+      hs.eventtap.keyStroke({}, 'ESCAPE')
+    end
+  end
+
+  -- Bind the Hyper key
+  hyperKey = hs.hotkey.bind({}, 'F18', pressedF18, releasedF18)
 end
 
 --
@@ -305,8 +340,6 @@ end
 
 -- Grid config =================================
 
-hyper = {"cmd", "alt", "ctrl","shift"}
-hyper2 = {"ctrl"}
 hs.window.animationDuration = 0.2;
 -- hints.style = "vimperator"
 -- Set grid size.
@@ -381,9 +414,6 @@ definitions = {
   f = function() hints.windowHints(nil) end,
   -- Shows all windows for current app
   v = function() hints.windowHints(window.focusedWindow():application():allWindows()) end,
-
-  -- Switches hypers, not used
-  -- ll = function() hyper, hyper2 = hyper2,hyper; rebindHotkeys() end,
 
   o = function() hs.execute(os.getenv("HOME") .. "/bin/subl ".. os.getenv("HOME") .."/.hammerspoon/init.lua") end,
   --
