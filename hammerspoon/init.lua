@@ -214,28 +214,30 @@ end
 -- WiFi
 --
 
-local home = {["Lemonparty"] = TRUE, ["Lemonparty 5GHz"] = TRUE}
-local lastSSID = hs.wifi.currentNetwork()
+-- local home = {["Lemonparty"] = TRUE, ["Lemonparty 5GHz"] = TRUE}
+-- local lastSSID = hs.wifi.currentNetwork()
 
-function ssidChangedCallback()
-  newSSID = hs.wifi.currentNetwork()
+-- function ssidChangedCallback()
+--   newSSID = hs.wifi.currentNetwork()
 
-  if home[newSSID] and not home[lastSSID] then
-    -- We just joined our home WiFi network
-    hs.audiodevice.defaultOutputDevice():setVolume(25)
-  elseif not home[newSSID] and home[lastSSID] then
-    -- We just departed our home WiFi network
-    hs.audiodevice.defaultOutputDevice():setVolume(0)
-  end
+--   if newSSID == lastSSID then return end
 
-  local messages = appfinder.appFromName('Messages')
-  messages:selectMenuItem("Log In")
+--   if home[newSSID] and not home[lastSSID] then
+--     -- We just joined our home WiFi network
+--     hs.audiodevice.defaultOutputDevice():setVolume(25)
+--   elseif not home[newSSID] and home[lastSSID] then
+--     -- We just departed our home WiFi network
+--     hs.audiodevice.defaultOutputDevice():setVolume(0)
+--   end
 
-  lastSSID = newSSID
-end
+--   local messages = appfinder.appFromName('Messages')
+--   messages:selectMenuItem("Log In")
 
-local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
-wifiWatcher:start()
+--   lastSSID = newSSID
+-- end
+
+-- local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback)
+-- wifiWatcher:start()
 
 --
 -- Sound
@@ -266,30 +268,34 @@ defaultDevice:watcherStart();
 -- <username> ALL=(root) NOPASSWD: /usr/bin/mdutil -i off /
 -- Verify with `sudo -l`
 --
-local currentPowerSource = hs.battery.powerSource();
-function batteryWatchUnplugged()
-  newPowerSource = hs.battery.powerSource();
-  if newPowerSource ~= currentPowerSource then
-    alert(string.format("New power source: %s", newPowerSource), 1);
+--
+-- Removing this for now, appears to just churn CPU
+--
+-- local currentPowerSource = nil;
+-- function batteryWatchUnplugged()
+--   newPowerSource = hs.battery.powerSource();
+--   if newPowerSource ~= currentPowerSource then
+--     alert(string.format("New power source: %s", newPowerSource), 1);
 
-    function taskCb(code, stdout, stderr)
-      if code ~= 0 then
-        alert("Failed, check console.");
-      end
-      print("stdout: "..stdout);
-      print("stderr: "..stderr)
-    end
-    if newPowerSource == 'Battery Power' then
-      alert("Disabling spotlight.", 1);
-      hs.task.new("/usr/bin/sudo", taskCb, {"/usr/bin/mdutil", "-i", "off", "/"}):start()
-    else
-      alert("Enabling spotlight.", 1);
-      hs.task.new("/usr/bin/sudo", taskCb, {"/usr/bin/mdutil", "-i", "on", "/"}):start()
-    end
-    currentPowerSource = newPowerSource;
-  end
-end
-local batteryWatcher = hs.battery.watcher.new(batteryWatchUnplugged):start();
+--     function taskCb(code, stdout, stderr)
+--       if code ~= 0 then
+--         alert("Failed, check console.");
+--       end
+--       print("stdout: "..stdout);
+--       print("stderr: "..stderr)
+--     end
+--     if newPowerSource == 'Battery Power' then
+--       alert("Disabling spotlight.", 1);
+--       hs.task.new("/usr/bin/sudo", taskCb, {"/usr/bin/mdutil", "-i", "off", "/"}):start()
+--     else
+--       alert("Enabling spotlight.", 1);
+--       hs.task.new("/usr/bin/sudo", taskCb, {"/usr/bin/mdutil", "-i", "on", "/"}):start()
+--     end
+--     currentPowerSource = newPowerSource;
+--   end
+-- end
+-- local batteryWatcher = hs.battery.watcher.new(batteryWatchUnplugged):start();
+-- batteryWatchUnplugged();
 
 --
 -- Application overrides
