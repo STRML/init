@@ -466,7 +466,7 @@ definitions = {
   h = grid.pushWindowLeft,
   j = grid.pushWindowDown,
   l = grid.pushWindowRight,
-  j = grid.pushWindowUp,
+  [";"] = grid.pushWindowUp,
 
   -- resize windows
   ["="] = grid.resizeWindowTaller,
